@@ -1,0 +1,969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>Ganesh Store — Admin Dashboard</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      min-height: 100vh;
+      padding-bottom: 80px;
+    }
+    @media (min-width: 768px) { body { padding-bottom: 30px; } }
+    .hide { display: none !important; }
+    .card-press:active { transform: scale(0.97); }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #1e293b; }
+    ::-webkit-scrollbar-thumb { background: #475569; border-radius: 9999px; }
+  </style>
+</head>
+<body class="antialiased">
+
+  <!-- ==================== LOGIN SCREEN ==================== -->
+  <div id="login-screen" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4 z-50">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 max-w-sm w-full shadow-2xl space-y-5 text-center">
+      <div class="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-3xl flex items-center justify-center mx-auto shadow-inner">
+        🔐
+      </div>
+      <div>
+        <h2 class="text-xl font-extrabold text-white">Owner Admin Login</h2>
+        <p class="text-xs text-slate-400 mt-1">Manage Ganesh Store daily rates & orders</p>
+      </div>
+
+      <form onsubmit="handleLogin(event)" class="space-y-4 text-left">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Admin Password</label>
+          <div class="relative">
+            <input type="password" id="admin-pass-input" placeholder="Enter password" required
+              class="w-full bg-slate-800/80 border border-slate-700 rounded-xl px-3.5 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+            <button type="button" onclick="togglePassVis()" class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+              <i class="fas fa-eye text-xs" id="pass-eye"></i>
+            </button>
+          </div>
+          <p class="text-[11px] text-slate-500 mt-1.5 text-center">Default: <b class="text-slate-300 font-mono">admin123</b></p>
+        </div>
+
+        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl text-sm transition shadow-lg card-press">
+          Sign In
+        </button>
+        <a href="index.html" class="block text-center text-xs text-slate-400 hover:text-emerald-400 pt-1">
+          ← Back to Customer Store
+        </a>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MAIN DASHBOARD ==================== -->
+  <div id="admin-app" class="hide">
+    
+    <!-- TOP HEADER -->
+    <header class="bg-slate-900/90 border-b border-slate-800 sticky top-0 z-40 backdrop-blur-md">
+      <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 flex items-center justify-center text-lg">
+            🏪
+          </div>
+          <div>
+            <div class="flex items-center gap-1.5">
+              <h1 class="text-base font-extrabold text-white">Ganesh Store Admin</h1>
+              <span class="bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">LIVE DB</span>
+            </div>
+            <p class="text-[11px] text-slate-400">Daily Price & Order Management</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <a href="index.html" target="_blank" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold px-3 py-1.5 rounded-xl border border-slate-700 flex items-center gap-1.5 transition">
+            <i class="fas fa-external-link-alt text-[10px]"></i>
+            <span class="hidden sm:inline">View Store</span>
+          </a>
+          <button onclick="handleLogout()" class="bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold px-3 py-1.5 rounded-xl border border-red-500/20 transition">
+            <i class="fas fa-sign-out-alt"></i>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-5 space-y-6">
+
+      <!-- QUICK STATS -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+          <span class="text-slate-400 text-xs font-medium">Total Products</span>
+          <p id="stat-total-products" class="text-2xl font-black text-white mt-1">0</p>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+          <span class="text-slate-400 text-xs font-medium">Pending Orders</span>
+          <p id="stat-pending-orders" class="text-2xl font-black text-amber-400 mt-1">0</p>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+          <span class="text-slate-400 text-xs font-medium">Delivered Orders</span>
+          <p id="stat-delivered-orders" class="text-2xl font-black text-emerald-400 mt-1">0</p>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+          <span class="text-slate-400 text-xs font-medium">Total Revenue</span>
+          <p id="stat-total-revenue" class="text-2xl font-black text-white mt-1">₹0</p>
+        </div>
+      </div>
+
+      <!-- NAVIGATION TABS -->
+      <div class="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto text-xs font-bold">
+        <button onclick="switchTab('products')" id="tab-btn-products" class="px-4 py-2 rounded-xl bg-emerald-600 text-white transition flex items-center gap-1.5">
+          <i class="fas fa-tags"></i>
+          <span>Products & Daily Rates</span>
+        </button>
+        <button onclick="switchTab('orders')" id="tab-btn-orders" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white transition flex items-center gap-1.5">
+          <i class="fas fa-box"></i>
+          <span>Customer Orders</span>
+          <span id="tab-orders-badge" class="bg-amber-500 text-slate-950 text-[10px] font-black px-1.5 rounded-full hide">0</span>
+        </button>
+        <button onclick="switchTab('settings')" id="tab-btn-settings" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white transition flex items-center gap-1.5">
+          <i class="fas fa-cog"></i>
+          <span>Store Settings</span>
+        </button>
+      </div>
+
+      <!-- ==================== TAB 1: PRODUCTS & DAILY RATES ==================== -->
+      <section id="section-products" class="space-y-4">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900 p-4 rounded-2xl border border-slate-800">
+          <div>
+            <h2 class="text-sm font-bold text-white flex items-center gap-2">
+              <span>Change Rates & Manage Catalog</span>
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">Edit rates below; changes update on all customer phones in real-time!</p>
+          </div>
+
+          <div class="flex items-center gap-2 flex-wrap">
+            <button onclick="openAddProductModal()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shadow-md card-press">
+              <i class="fas fa-plus"></i>
+              <span>Add New Product</span>
+            </button>
+            <button onclick="seedInitialProductsConfirm()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white font-semibold text-xs px-3 py-2 rounded-xl border border-slate-700 transition" title="Populate ~50 default grocery items to database">
+              <i class="fas fa-magic text-yellow-400 mr-1"></i>
+              <span>Seed Default Items</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter & Search Bar -->
+        <div class="flex flex-col sm:flex-row gap-2.5">
+          <div class="relative flex-1">
+            <input type="text" id="product-search-input" oninput="filterAdminProducts()" placeholder="Search product name..."
+              class="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs"></i>
+          </div>
+
+          <div class="flex gap-1.5 overflow-x-auto pb-1" id="category-filter-chips">
+            <!-- Filter chips rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Products List Table / Cards -->
+        <div id="products-container" class="space-y-2.5">
+          <!-- Injected dynamically -->
+        </div>
+
+        <!-- Empty Products Notice -->
+        <div id="products-empty-notice" class="text-center py-16 bg-slate-900/50 rounded-3xl border border-slate-800/80 hide">
+          <div class="text-5xl mb-3">📦</div>
+          <h3 class="text-base font-bold text-white">No products found</h3>
+          <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">Click "Seed Default Items" above to load 50+ grocery items with one click, or click "+ Add New Product".</p>
+          <button onclick="seedInitialProducts()" class="mt-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition shadow-lg">
+            ⚡ Seed All 50+ Default Groceries Now
+          </button>
+        </div>
+
+      </section>
+
+      <!-- ==================== TAB 2: ORDERS ==================== -->
+      <section id="section-orders" class="hide space-y-4">
+        
+        <div class="flex items-center justify-between bg-slate-900 p-4 rounded-2xl border border-slate-800">
+          <div>
+            <h2 class="text-sm font-bold text-white">Live Customer Orders</h2>
+            <p class="text-xs text-slate-400 mt-0.5">Incoming orders stream automatically in real-time</p>
+          </div>
+
+          <div class="flex items-center gap-1.5 text-xs font-semibold">
+            <button onclick="setOrderFilter('all')" id="order-filter-all" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white">All</button>
+            <button onclick="setOrderFilter('Pending')" id="order-filter-pending" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-400">Pending</button>
+            <button onclick="setOrderFilter('Preparing')" id="order-filter-preparing" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-400">Preparing</button>
+            <button onclick="setOrderFilter('Delivered')" id="order-filter-delivered" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-400">Delivered</button>
+          </div>
+        </div>
+
+        <div id="orders-container" class="space-y-3.5">
+          <!-- Injected dynamically -->
+        </div>
+
+        <div id="orders-empty-notice" class="text-center py-16 bg-slate-900/50 rounded-3xl border border-slate-800/80 hide">
+          <div class="text-5xl mb-3">📬</div>
+          <h3 class="text-base font-bold text-white">No orders match this filter</h3>
+          <p class="text-xs text-slate-400 mt-1">When customers place orders, they will appear here instantly!</p>
+        </div>
+
+      </section>
+
+      <!-- ==================== TAB 3: SETTINGS ==================== -->
+      <section id="section-settings" class="hide space-y-4">
+        
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-7 max-w-xl mx-auto space-y-5">
+          <h2 class="text-base font-bold text-white pb-3 border-b border-slate-800 flex items-center gap-2">
+            <i class="fas fa-store text-emerald-400"></i>
+            <span>Store Configuration</span>
+          </h2>
+
+          <form onsubmit="saveStoreSettings(event)" class="space-y-4 text-xs">
+            <div>
+              <label class="block font-semibold text-slate-300 mb-1">Store Owner WhatsApp Number (with country code)</label>
+              <input type="text" id="setting-whatsapp" placeholder="919391462015"
+                class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+              <p class="text-[10px] text-slate-500 mt-1">Customers send order confirmations to this WhatsApp number.</p>
+            </div>
+
+            <div>
+              <label class="block font-semibold text-slate-300 mb-1">Delivery Fee (₹)</label>
+              <input type="number" id="setting-delivery-fee" placeholder="25"
+                class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+            </div>
+
+            <div>
+              <label class="block font-semibold text-slate-300 mb-1">Free Delivery Minimum Cart Total (₹)</label>
+              <input type="number" id="setting-free-delivery-min" placeholder="199"
+                class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+            </div>
+
+            <div>
+              <label class="block font-semibold text-slate-300 mb-1">Store Announcement Banner</label>
+              <input type="text" id="setting-banner" placeholder="🎉 Flat ₹50 OFF on first order! Code: FRESH50"
+                class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+            </div>
+
+            <div>
+              <label class="block font-semibold text-slate-300 mb-1">Change Admin Password</label>
+              <input type="text" id="setting-admin-pass" placeholder="admin123"
+                class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+            </div>
+
+            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl text-xs transition shadow-md card-press">
+              Save Store Settings
+            </button>
+          </form>
+        </div>
+
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ==================== ADD / EDIT PRODUCT MODAL ==================== -->
+  <div id="product-modal" class="fixed inset-0 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4 z-50 hide">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-2xl space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+        <h3 id="modal-title" class="font-bold text-sm text-white">Add New Product</h3>
+        <button onclick="closeProductModal()" class="text-slate-400 hover:text-white">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <form onsubmit="handleSaveProduct(event)" class="space-y-3 text-xs">
+        <input type="hidden" id="modal-product-id" value="" />
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Product Name <span class="text-red-400">*</span></label>
+          <input type="text" id="modal-name" required placeholder="e.g. Fresh Tomato"
+            class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Category <span class="text-red-400">*</span></label>
+            <select id="modal-category" required class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="vegetables">🥬 Vegetables</option>
+              <option value="fruits">🍎 Fruits</option>
+              <option value="dairy">🥛 Dairy & Eggs</option>
+              <option value="drinks">🥤 Cold Drinks</option>
+              <option value="snacks">🍿 Snacks</option>
+              <option value="staples">🌾 Atta, Rice & Dal</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Emoji Icon</label>
+            <input type="text" id="modal-emoji" placeholder="🍅"
+              class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white text-center text-lg focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Daily Price (₹) <span class="text-red-400">*</span></label>
+            <input type="number" id="modal-price" required min="1" placeholder="40"
+              class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2 text-white font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-300 mb-1">Original / MRP (₹)</label>
+            <input type="number" id="modal-original-price" min="1" placeholder="50"
+              class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-300 mb-1">Unit / Packaging <span class="text-red-400">*</span></label>
+          <input type="text" id="modal-unit" required placeholder="e.g. 1 kg, 500g, 1 Litre, 1 dozen"
+            class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3.5 py-2 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+        </div>
+
+        <div class="flex items-center justify-between pt-1">
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="modal-featured" class="w-4 h-4 accent-emerald-500 rounded" />
+            <span class="text-slate-300">Feature on Home Page 🔥</span>
+          </label>
+
+          <label class="flex items-center gap-2 cursor-pointer">
+            <input type="checkbox" id="modal-active" checked class="w-4 h-4 accent-emerald-500 rounded" />
+            <span class="text-slate-300">In Stock (Active)</span>
+          </label>
+        </div>
+
+        <div class="pt-3 flex gap-2">
+          <button type="button" onclick="closeProductModal()" class="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2.5 rounded-xl font-semibold transition">
+            Cancel
+          </button>
+          <button type="submit" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl transition shadow-md card-press">
+            Save Product
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 border border-slate-700 text-white px-5 py-2.5 rounded-full shadow-2xl text-xs font-semibold opacity-0 transition-opacity duration-300 z-50 pointer-events-none flex items-center gap-2">
+    <span id="toast-icon">✓</span>
+    <span id="toast-msg">Operation successful</span>
+  </div>
+
+  <!-- ==================== JAVASCRIPT ==================== -->
+  <script>
+    // ===================== FIREBASE CONFIG =====================
+    const firebaseConfig = {
+      apiKey: "AIzaSyCRFRMwglVm63ygFvzwBL819SLYR0K-Bvk",
+      authDomain: "ganesh-store-55fb9.firebaseapp.com",
+      databaseURL: "https://ganesh-store-55fb9-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "ganesh-store-55fb9",
+      storageBucket: "ganesh-store-55fb9.firebasestorage.app",
+      messagingSenderId: "954407790215",
+      appId: "1:954407790215:web:41fa6a39cd9e59e2fe7a22"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Categories metadata
+    const categoryMeta = {
+      all:        { name: 'All Items', icon: '🛒' },
+      vegetables: { name: 'Vegetables', icon: '🥬' },
+      fruits:     { name: 'Fruits', icon: '🍎' },
+      dairy:      { name: 'Dairy', icon: '🥛' },
+      drinks:     { name: 'Cold Drinks', icon: '🥤' },
+      snacks:     { name: 'Snacks', icon: '🍿' },
+      staples:    { name: 'Staples', icon: '🌾' }
+    };
+
+    // State
+    let productsData = {};
+    let ordersData = {};
+    let selectedCategoryFilter = 'all';
+    let currentOrderFilter = 'all';
+    let activeTab = 'products';
+    let adminPass = localStorage.getItem('ganesh_admin_pass') || 'admin123';
+
+    // ===================== AUTH =====================
+    function checkAuth() {
+      if (sessionStorage.getItem('ganesh_admin_session') === 'true') {
+        document.getElementById('login-screen').classList.add('hide');
+        document.getElementById('admin-app').classList.remove('hide');
+        initAdminData();
+      } else {
+        document.getElementById('login-screen').classList.remove('hide');
+        document.getElementById('admin-app').classList.add('hide');
+      }
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const entered = document.getElementById('admin-pass-input').value;
+      if (entered === adminPass) {
+        sessionStorage.setItem('ganesh_admin_session', 'true');
+        showToast('Login successful!');
+        checkAuth();
+      } else {
+        showToast('Incorrect password!', 'error');
+      }
+    }
+
+    function handleLogout() {
+      sessionStorage.removeItem('ganesh_admin_session');
+      checkAuth();
+      showToast('Logged out');
+    }
+
+    function togglePassVis() {
+      const inp = document.getElementById('admin-pass-input');
+      const eye = document.getElementById('pass-eye');
+      if (inp.type === 'password') {
+        inp.type = 'text';
+        eye.classList.replace('fa-eye', 'fa-eye-slash');
+      } else {
+        inp.type = 'password';
+        eye.classList.replace('fa-eye-slash', 'fa-eye');
+      }
+    }
+
+    // ===================== TAB SWITCHING =====================
+    function switchTab(tabId) {
+      activeTab = tabId;
+      ['products', 'orders', 'settings'].forEach(t => {
+        const sec = document.getElementById('section-' + t);
+        const btn = document.getElementById('tab-btn-' + t);
+        if (t === tabId) {
+          sec.classList.remove('hide');
+          btn.className = 'px-4 py-2 rounded-xl bg-emerald-600 text-white transition flex items-center gap-1.5';
+        } else {
+          sec.classList.add('hide');
+          btn.className = 'px-4 py-2 rounded-xl bg-slate-800 text-slate-300 hover:text-white transition flex items-center gap-1.5';
+        }
+      });
+    }
+
+    // ===================== DATA LISTENERS =====================
+    function initAdminData() {
+      renderCategoryFilterChips();
+
+      // Listen for products
+      db.ref('products').on('value', snap => {
+        productsData = snap.val() || {};
+        renderAdminProducts();
+        updateStats();
+      });
+
+      // Listen for orders
+      db.ref('orders').on('value', snap => {
+        ordersData = snap.val() || {};
+        renderAdminOrders();
+        updateStats();
+      });
+
+      // Listen for settings
+      db.ref('settings').on('value', snap => {
+        const s = snap.val() || {};
+        if (s.whatsappNumber) document.getElementById('setting-whatsapp').value = s.whatsappNumber;
+        if (s.deliveryFee) document.getElementById('setting-delivery-fee').value = s.deliveryFee;
+        if (s.freeDeliveryMin) document.getElementById('setting-free-delivery-min').value = s.freeDeliveryMin;
+        if (s.banner) document.getElementById('setting-banner').value = s.banner;
+        if (s.adminPassword) {
+          adminPass = s.adminPassword;
+          localStorage.setItem('ganesh_admin_pass', adminPass);
+        }
+        document.getElementById('setting-admin-pass').value = adminPass;
+      });
+    }
+
+    function updateStats() {
+      // Products count
+      let totalProd = 0;
+      Object.keys(productsData).forEach(c => {
+        totalProd += Object.keys(productsData[c] || {}).length;
+      });
+      document.getElementById('stat-total-products').textContent = totalProd;
+
+      // Orders stats
+      const ordersList = Object.values(ordersData);
+      const pending = ordersList.filter(o => o.status === 'Pending' || o.status === 'Preparing').length;
+      const delivered = ordersList.filter(o => o.status === 'Delivered').length;
+      const rev = ordersList.reduce((s, o) => s + (o.total || 0), 0);
+
+      document.getElementById('stat-pending-orders').textContent = pending;
+      document.getElementById('stat-delivered-orders').textContent = delivered;
+      document.getElementById('stat-total-revenue').textContent = `₹${rev.toLocaleString('en-IN')}`;
+
+      // Tab badge
+      const badge = document.getElementById('tab-orders-badge');
+      if (pending > 0) {
+        badge.textContent = pending;
+        badge.classList.remove('hide');
+      } else {
+        badge.classList.add('hide');
+      }
+    }
+
+    // ===================== PRODUCTS MANAGEMENT =====================
+    function renderCategoryFilterChips() {
+      const container = document.getElementById('category-filter-chips');
+      container.innerHTML = Object.entries(categoryMeta).map(([id, meta]) => `
+        <button onclick="setProductCategoryFilter('${id}')"
+          class="px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition ${selectedCategoryFilter === id ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'}">
+          ${meta.icon} ${meta.name}
+        </button>
+      `).join('');
+    }
+
+    function setProductCategoryFilter(catId) {
+      selectedCategoryFilter = catId;
+      renderCategoryFilterChips();
+      renderAdminProducts();
+    }
+
+    function filterAdminProducts() {
+      renderAdminProducts();
+    }
+
+    function renderAdminProducts() {
+      const container = document.getElementById('products-container');
+      const emptyNotice = document.getElementById('products-empty-notice');
+      const query = (document.getElementById('product-search-input')?.value || '').trim().toLowerCase();
+
+      let flatList = [];
+      const cats = selectedCategoryFilter === 'all' ? Object.keys(productsData) : [selectedCategoryFilter];
+
+      cats.forEach(catId => {
+        const catItems = productsData[catId] || {};
+        Object.entries(catItems).forEach(([id, item]) => {
+          if (!query || item.name.toLowerCase().includes(query) || (item.unit || '').toLowerCase().includes(query)) {
+            flatList.push({ id, catId, ...item });
+          }
+        });
+      });
+
+      if (flatList.length === 0) {
+        container.innerHTML = '';
+        emptyNotice.classList.remove('hide');
+        return;
+      }
+
+      emptyNotice.classList.add('hide');
+
+      container.innerHTML = flatList.map(p => `
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-slate-700 transition">
+          <div class="flex items-center gap-3 flex-1">
+            <div class="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center text-3xl select-none">
+              ${p.emoji || '📦'}
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h4 class="font-bold text-sm text-white">${escHtml(p.name)}</h4>
+                ${p.featured ? '<span class="bg-yellow-500/20 text-yellow-300 text-[10px] font-bold px-1.5 py-0.5 rounded">🔥 Hot</span>' : ''}
+                ${p.active === false ? '<span class="bg-red-500/20 text-red-300 text-[10px] font-bold px-1.5 py-0.5 rounded">Out of Stock</span>' : ''}
+              </div>
+              <p class="text-xs text-slate-400 mt-0.5">
+                Unit: <b class="text-slate-300">${escHtml(p.unit || '')}</b> • Category: <span class="capitalize text-slate-400">${p.catId}</span>
+              </p>
+            </div>
+          </div>
+
+          <!-- Quick Rate Editor -->
+          <div class="flex items-center gap-3 border-t sm:border-t-0 pt-2 sm:pt-0">
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs text-slate-400 font-semibold">Rate: ₹</span>
+              <input type="number" value="${p.price}" min="1" id="rate-input-${p.id}"
+                class="w-20 bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-sm font-extrabold text-emerald-400 text-center focus:outline-none focus:ring-2 focus:ring-emerald-500" />
+              <button onclick="saveQuickPrice('${p.catId}', '${p.id}')" class="bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white px-2.5 py-1 rounded-lg text-xs font-bold border border-emerald-500/30 transition" title="Update Rate">
+                Save
+              </button>
+            </div>
+
+            <div class="flex items-center gap-1.5">
+              <button onclick="openEditProductModal('${p.catId}', '${p.id}')" class="bg-slate-800 hover:bg-slate-700 text-slate-300 p-2 rounded-lg text-xs transition" title="Edit Full Details">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button onclick="deleteProduct('${p.catId}', '${p.id}', '${escHtml(p.name)}')" class="bg-red-500/10 hover:bg-red-500/20 text-red-400 p-2 rounded-lg text-xs transition" title="Delete Product">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function saveQuickPrice(catId, productId) {
+      const input = document.getElementById('rate-input-' + productId);
+      const newPrice = Number(input.value);
+      if (!newPrice || newPrice <= 0) {
+        showToast('Please enter a valid price!', 'error');
+        return;
+      }
+
+      db.ref(`products/${catId}/${productId}/price`).set(newPrice)
+        .then(() => {
+          showToast(`Rate updated to ₹${newPrice}!`);
+        })
+        .catch(err => {
+          showToast('Failed to update rate: ' + err.message, 'error');
+        });
+    }
+
+    // Modal Add / Edit
+    function openAddProductModal() {
+      document.getElementById('modal-title').textContent = 'Add New Product';
+      document.getElementById('modal-product-id').value = '';
+      document.getElementById('modal-name').value = '';
+      document.getElementById('modal-category').value = 'vegetables';
+      document.getElementById('modal-emoji').value = '📦';
+      document.getElementById('modal-price').value = '';
+      document.getElementById('modal-original-price').value = '';
+      document.getElementById('modal-unit').value = '1 kg';
+      document.getElementById('modal-featured').checked = false;
+      document.getElementById('modal-active').checked = true;
+      document.getElementById('product-modal').classList.remove('hide');
+    }
+
+    function openEditProductModal(catId, productId) {
+      const item = productsData[catId]?.[productId];
+      if (!item) return;
+
+      document.getElementById('modal-title').textContent = 'Edit Product Details';
+      document.getElementById('modal-product-id').value = `${catId}:${productId}`;
+      document.getElementById('modal-name').value = item.name || '';
+      document.getElementById('modal-category').value = catId;
+      document.getElementById('modal-emoji').value = item.emoji || '📦';
+      document.getElementById('modal-price').value = item.price || '';
+      document.getElementById('modal-original-price').value = item.originalPrice || '';
+      document.getElementById('modal-unit').value = item.unit || '';
+      document.getElementById('modal-featured').checked = !!item.featured;
+      document.getElementById('modal-active').checked = item.active !== false;
+      document.getElementById('product-modal').classList.remove('hide');
+    }
+
+    function closeProductModal() {
+      document.getElementById('product-modal').classList.add('hide');
+    }
+
+    function handleSaveProduct(e) {
+      e.preventDefault();
+      const idKey = document.getElementById('modal-product-id').value;
+      const name = document.getElementById('modal-name').value.trim();
+      const category = document.getElementById('modal-category').value;
+      const emoji = document.getElementById('modal-emoji').value.trim() || '📦';
+      const price = Number(document.getElementById('modal-price').value);
+      const originalPrice = Number(document.getElementById('modal-original-price').value) || 0;
+      const unit = document.getElementById('modal-unit').value.trim();
+      const featured = document.getElementById('modal-featured').checked;
+      const active = document.getElementById('modal-active').checked;
+
+      const productPayload = {
+        name, emoji, price, originalPrice, unit, featured, active,
+        updatedAt: Date.now()
+      };
+
+      if (idKey) {
+        // Editing existing
+        const [oldCat, prodId] = idKey.split(':');
+        if (oldCat !== category) {
+          // Category changed: delete from old, add to new
+          db.ref(`products/${oldCat}/${prodId}`).remove();
+        }
+        db.ref(`products/${category}/${prodId}`).set(productPayload)
+          .then(() => {
+            closeProductModal();
+            showToast('Product updated successfully!');
+          });
+      } else {
+        // Add new product
+        const newRef = db.ref(`products/${category}`).push();
+        newRef.set(productPayload)
+          .then(() => {
+            closeProductModal();
+            showToast('New product added to store!');
+          });
+      }
+    }
+
+    function deleteProduct(catId, productId, name) {
+      if (confirm(`Are you sure you want to delete "${name}" from store?`)) {
+        db.ref(`products/${catId}/${productId}`).remove()
+          .then(() => showToast('Product deleted', 'info'))
+          .catch(err => showToast(err.message, 'error'));
+      }
+    }
+
+    // ===================== SEED DEFAULT INVENTORY =====================
+    const defaultCatalog = {
+      vegetables: {
+        v1: { name: 'Fresh Tomato', price: 40, originalPrice: 50, unit: '1 kg', emoji: '🍅', featured: true, active: true },
+        v2: { name: 'Farm Potato', price: 30, originalPrice: 38, unit: '1 kg', emoji: '🥔', featured: true, active: true },
+        v3: { name: 'Fresh Red Onion', price: 35, originalPrice: 45, unit: '1 kg', emoji: '🧅', featured: true, active: true },
+        v4: { name: 'Crunchy Carrot', price: 50, originalPrice: 60, unit: '500g', emoji: '🥕', active: true },
+        v5: { name: 'French Beans', price: 60, originalPrice: 70, unit: '500g', emoji: '🫘', active: true },
+        v6: { name: 'Green Cabbage', price: 25, originalPrice: 35, unit: '1 pc', emoji: '🥬', active: true },
+        v7: { name: 'Fresh Cauliflower', price: 40, originalPrice: 50, unit: '1 pc', emoji: '🥦', active: true },
+        v8: { name: 'Palak / Spinach', price: 20, originalPrice: 25, unit: '1 bunch', emoji: '🌿', active: true },
+        v9: { name: 'Purple Brinjal', price: 45, originalPrice: 55, unit: '500g', emoji: '🍆', active: true },
+        v10: { name: 'Green Capsicum', price: 70, originalPrice: 85, unit: '500g', emoji: '🫑', active: true },
+        v11: { name: 'Green Chilli & Ginger', price: 30, originalPrice: 35, unit: '200g combo', emoji: '🌶️', active: true },
+        v12: { name: 'Coriander & Mint', price: 15, originalPrice: 20, unit: '1 bunch combo', emoji: '🌱', active: true }
+      },
+      fruits: {
+        f1: { name: 'Shimla Royal Apple', price: 180, originalPrice: 210, unit: '1 kg (4-5 pcs)', emoji: '🍎', featured: true, active: true },
+        f2: { name: 'Robusta Banana', price: 40, originalPrice: 50, unit: '1 dozen', emoji: '🍌', featured: true, active: true },
+        f3: { name: 'Nagpur Orange', price: 80, originalPrice: 95, unit: '1 kg', emoji: '🍊', active: true },
+        f4: { name: 'Banganapalli Mango', price: 120, originalPrice: 150, unit: '1 kg', emoji: '🥭', active: true },
+        f5: { name: 'Seedless Green Grapes', price: 90, originalPrice: 110, unit: '500g', emoji: '🍇', active: true },
+        f6: { name: 'Kandhari Pomegranate', price: 150, originalPrice: 180, unit: '1 kg', emoji: '🍎', active: true },
+        f7: { name: 'Sweet Watermelon', price: 45, originalPrice: 60, unit: '1 pc (approx 2kg)', emoji: '🍉', active: true },
+        f8: { name: 'Ripe Papaya', price: 40, originalPrice: 50, unit: '1 pc', emoji: '🍈', active: true }
+      },
+      dairy: {
+        m1: { name: 'Heritage Cow Milk', price: 62, originalPrice: 65, unit: '1 Litre packet', emoji: '🥛', featured: true, active: true },
+        m2: { name: 'Fresh Malai Curd', price: 35, originalPrice: 40, unit: '500g cup', emoji: '🥣', active: true },
+        m3: { name: 'Fresh Paneer Block', price: 85, originalPrice: 95, unit: '200g pack', emoji: '🧀', featured: true, active: true },
+        m4: { name: 'Amul Butter Salted', price: 56, originalPrice: 60, unit: '100g pack', emoji: '🧈', active: true },
+        m5: { name: 'Amul Cheese Slices', price: 75, originalPrice: 85, unit: '5 slices pack', emoji: '🧀', active: true },
+        m6: { name: 'Pure Desi Cow Ghee', price: 135, originalPrice: 150, unit: '200ml jar', emoji: '🫙', active: true },
+        m7: { name: 'Farm Brown Eggs', price: 45, originalPrice: 50, unit: '6 eggs tray', emoji: '🥚', active: true }
+      },
+      drinks: {
+        d1: { name: 'Coca Cola Chilled', price: 40, originalPrice: 45, unit: '750ml bottle', emoji: '🥤', featured: true, active: true },
+        d2: { name: 'Sprite Lemon Drink', price: 40, originalPrice: 45, unit: '750ml bottle', emoji: '🧃', active: true },
+        d3: { name: 'Thums Up Charged', price: 40, originalPrice: 45, unit: '750ml bottle', emoji: '🥤', active: true },
+        d4: { name: 'Kinley Mineral Water', price: 20, originalPrice: 20, unit: '1 Litre bottle', emoji: '💧', active: true },
+        d5: { name: 'Real Alphonso Mango', price: 85, originalPrice: 95, unit: '1 Litre tetra', emoji: '🥭', active: true },
+        d6: { name: 'Tender Coconut Water', price: 50, originalPrice: 60, unit: '1 natural pc', emoji: '🥥', active: true },
+        d7: { name: 'Maaza Mango Drink', price: 55, originalPrice: 60, unit: '1.2 Litre bottle', emoji: '🧃', active: true }
+      },
+      snacks: {
+        s1: { name: 'Lays Classic Salted', price: 20, originalPrice: 20, unit: '50g pack', emoji: '🥔', active: true },
+        s2: { name: 'Kurkure Masala Munch', price: 20, originalPrice: 20, unit: '85g pack', emoji: '🌽', featured: true, active: true },
+        s3: { name: 'Britannia Good Day', price: 30, originalPrice: 35, unit: '120g pack', emoji: '🍪', active: true },
+        s4: { name: 'Haldiram Aloo Bhujia', price: 45, originalPrice: 50, unit: '150g pack', emoji: '🥨', active: true },
+        s5: { name: 'Parle-G Gold Biscuits', price: 15, originalPrice: 15, unit: '1 pack', emoji: '🍪', active: true },
+        s6: { name: 'Bingo Mad Angles', price: 20, originalPrice: 20, unit: '66g pack', emoji: '🔺', active: true },
+        s7: { name: 'Cadbury Dairy Milk', price: 80, originalPrice: 90, unit: '60g bar', emoji: '🍫', active: true }
+      },
+      staples: {
+        st1: { name: 'Chakki Fresh Atta', price: 240, originalPrice: 270, unit: '5 kg bag', emoji: '🌾', featured: true, active: true },
+        st2: { name: 'Sona Masoori Raw Rice', price: 320, originalPrice: 360, unit: '5 kg bag', emoji: '🍚', active: true },
+        st3: { name: 'Tata Sampann Toor Dal', price: 95, originalPrice: 110, unit: '500g pack', emoji: '🥣', active: true },
+        st4: { name: 'Fortune Refined Oil', price: 135, originalPrice: 150, unit: '1 Litre pouch', emoji: '🌻', active: true },
+        st5: { name: 'Tata Vacuum Iodized Salt', price: 28, originalPrice: 30, unit: '1 kg pack', emoji: '🧂', active: true }
+      }
+    };
+
+    function seedInitialProductsConfirm() {
+      if (confirm('Load/reset all ~50 standard grocery items into Firebase? Your current items will be merged/updated.')) {
+        seedInitialProducts();
+      }
+    }
+
+    function seedInitialProducts() {
+      showToast('Seeding products to Firebase...', 'info');
+      db.ref('products').set(defaultCatalog)
+        .then(() => {
+          showToast('All 50+ items uploaded to Firebase! 🎉');
+        })
+        .catch(err => {
+          showToast('Failed to seed: ' + err.message, 'error');
+        });
+    }
+
+    // ===================== ORDERS MANAGEMENT =====================
+    function setOrderFilter(filter) {
+      currentOrderFilter = filter;
+      ['all', 'pending', 'preparing', 'delivered'].forEach(f => {
+        const btn = document.getElementById('order-filter-' + f);
+        if (btn) {
+          btn.className = f === filter.toLowerCase()
+            ? 'px-3 py-1.5 rounded-lg bg-emerald-600 text-white'
+            : 'px-3 py-1.5 rounded-lg bg-slate-800 text-slate-400';
+        }
+      });
+      renderAdminOrders();
+    }
+
+    function renderAdminOrders() {
+      const container = document.getElementById('orders-container');
+      const emptyNotice = document.getElementById('orders-empty-notice');
+
+      const allOrders = Object.entries(ordersData)
+        .map(([id, o]) => ({ id, ...o }))
+        .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+      let filtered = allOrders;
+      if (currentOrderFilter !== 'all') {
+        filtered = allOrders.filter(o => o.status === currentOrderFilter);
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = '';
+        emptyNotice.classList.remove('hide');
+        return;
+      }
+
+      emptyNotice.classList.add('hide');
+
+      container.innerHTML = filtered.map(o => {
+        const cust = o.customer || {};
+        return `
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="font-mono font-bold text-sm text-emerald-400">${escHtml(o.id)}</span>
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">${escHtml(o.paymentMethod || 'COD')}</span>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-0.5">${escHtml(o.date || '')}</p>
+              </div>
+
+              <!-- Status selector -->
+              <div class="flex items-center gap-2">
+                <span class="text-xs text-slate-400 font-semibold">Status:</span>
+                <select onchange="updateOrderStatus('${o.id}', this.value)" class="text-xs font-bold bg-slate-800 border border-slate-700 rounded-xl px-3 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <option value="Pending" ${o.status === 'Pending' ? 'selected' : ''}>⏳ Pending</option>
+                  <option value="Preparing" ${o.status === 'Preparing' ? 'selected' : ''}>🍳 Preparing</option>
+                  <option value="Out for Delivery" ${o.status === 'Out for Delivery' ? 'selected' : ''}>🛵 Out for Delivery</option>
+                  <option value="Delivered" ${o.status === 'Delivered' ? 'selected' : ''}>✓ Delivered</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Customer Info -->
+            <div class="bg-slate-800/60 rounded-xl p-3 text-xs grid grid-cols-1 sm:grid-cols-3 gap-2 border border-slate-800">
+              <div>
+                <span class="text-slate-400 block text-[10px]">Customer</span>
+                <b class="text-white">${escHtml(cust.name || 'Anonymous')}</b>
+              </div>
+              <div>
+                <span class="text-slate-400 block text-[10px]">Phone</span>
+                <a href="tel:${escHtml(cust.phone || '')}" class="text-emerald-400 font-bold hover:underline">
+                  <i class="fas fa-phone-alt text-[10px] mr-1"></i>${escHtml(cust.phone || '')}
+                </a>
+              </div>
+              <div>
+                <span class="text-slate-400 block text-[10px]">Address</span>
+                <span class="text-slate-300">${escHtml(cust.address || '')}</span>
+                ${cust.note ? `<p class="text-[10px] text-yellow-400 font-medium mt-0.5">Note: ${escHtml(cust.note)}</p>` : ''}
+              </div>
+            </div>
+
+            <!-- Items -->
+            <div class="space-y-1 text-xs">
+              ${(o.items || []).map(i => `
+                <div class="flex justify-between items-center py-0.5 text-slate-300">
+                  <span>${i.emoji || '•'} ${escHtml(i.name)} <span class="text-slate-500">× ${i.qty}</span></span>
+                  <span class="font-semibold text-white">₹${i.price * i.qty}</span>
+                </div>
+              `).join('')}
+            </div>
+
+            <div class="border-t border-slate-800 pt-3 flex items-center justify-between">
+              <div>
+                <span class="text-xs text-slate-400">Total:</span>
+                <span class="text-base font-extrabold text-emerald-400 ml-1">₹${o.total}</span>
+              </div>
+
+              <div class="flex gap-2">
+                <button onclick="whatsappCustomer('${escHtml(cust.phone || '')}', '${escHtml(o.id)}')" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded-xl transition flex items-center gap-1.5 shadow-sm">
+                  <i class="fab fa-whatsapp text-sm"></i> WhatsApp
+                </button>
+                <button onclick="deleteOrder('${o.id}')" class="text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 px-2.5 py-1.5 rounded-xl transition" title="Delete Order">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function updateOrderStatus(orderId, status) {
+      db.ref(`orders/${orderId}/status`).set(status)
+        .then(() => showToast(`Order marked as ${status}`));
+    }
+
+    function deleteOrder(orderId) {
+      if (confirm(`Delete order #${orderId}?`)) {
+        db.ref(`orders/${orderId}`).remove()
+          .then(() => showToast('Order removed', 'info'));
+      }
+    }
+
+    function whatsappCustomer(phone, orderId) {
+      if (!phone) { showToast('No customer phone available', 'error'); return; }
+      const cleanPhone = phone.replace(/[^0-9]/g, '');
+      const formatted = cleanPhone.startsWith('91') ? cleanPhone : '91' + cleanPhone;
+      const msg = encodeURIComponent(`Hello! Ganesh Store here regarding your order #${orderId}. We are packing your items and will deliver shortly!`);
+      window.open(`https://wa.me/${formatted}?text=${msg}`, '_blank');
+    }
+
+    // ===================== SETTINGS =====================
+    function saveStoreSettings(e) {
+      e.preventDefault();
+      const whatsappNumber = document.getElementById('setting-whatsapp').value.trim();
+      const deliveryFee = Number(document.getElementById('setting-delivery-fee').value) || 25;
+      const freeDeliveryMin = Number(document.getElementById('setting-free-delivery-min').value) || 199;
+      const banner = document.getElementById('setting-banner').value.trim();
+      const newAdminPass = document.getElementById('setting-admin-pass').value.trim();
+
+      const settingsPayload = {
+        whatsappNumber,
+        deliveryFee,
+        freeDeliveryMin,
+        banner,
+        adminPassword: newAdminPass || 'admin123',
+        updatedAt: Date.now()
+      };
+
+      db.ref('settings').set(settingsPayload)
+        .then(() => {
+          if (newAdminPass) {
+            adminPass = newAdminPass;
+            localStorage.setItem('ganesh_admin_pass', adminPass);
+          }
+          showToast('Store settings saved successfully! ✅');
+        })
+        .catch(err => showToast(err.message, 'error'));
+    }
+
+    // ===================== UTILITIES =====================
+    let _toastTimer;
+    function showToast(msg, type = 'success') {
+      const t = document.getElementById('toast');
+      const tm = document.getElementById('toast-msg');
+      const ti = document.getElementById('toast-icon');
+
+      tm.textContent = msg;
+      ti.textContent = type === 'error' ? '⚠️' : type === 'info' ? 'ℹ️' : '✓';
+      t.className = type === 'error'
+        ? 'fixed bottom-6 left-1/2 -translate-x-1/2 bg-red-950 border border-red-800 text-white px-5 py-2.5 rounded-full shadow-2xl text-xs font-semibold opacity-100 transition-opacity duration-300 z-50 pointer-events-none flex items-center gap-2'
+        : 'fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 border border-slate-700 text-white px-5 py-2.5 rounded-full shadow-2xl text-xs font-semibold opacity-100 transition-opacity duration-300 z-50 pointer-events-none flex items-center gap-2';
+
+      clearTimeout(_toastTimer);
+      _toastTimer = setTimeout(() => {
+        t.classList.add('opacity-0');
+      }, 2400);
+    }
+
+    function escHtml(str) {
+      if (!str) return '';
+      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // Auto check login
+    checkAuth();
+  </script>
+</body>
+</html>

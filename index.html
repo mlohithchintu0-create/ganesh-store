@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#16a34a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="description" content="Ganesh Store Vijayawada - Fresh vegetables, fruits, dairy, drinks delivered in 15 minutes. Order online!" />
+  <link rel="manifest" href="./manifest.json" />
+  <title>Ganesh Store Vijayawada | Fresh Grocery Delivery in 15 Mins</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f8fafc; color: #1e293b; padding-bottom: 72px;
+    }
+    @media (min-width: 768px) { body { padding-bottom: 24px; } }
+    .hide { display: none !important; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    .bounce-scale { animation: bounceScale 0.3s cubic-bezier(0.175,0.885,0.32,1.275); }
+    @keyframes bounceScale { 0%{transform:scale(1)} 50%{transform:scale(1.35)} 100%{transform:scale(1)} }
+    .card-press:active { transform: scale(0.97); }
+    .pulse-subtle { animation: pulseSubtle 2s infinite ease-in-out; }
+    @keyframes pulseSubtle { 0%,100%{opacity:1} 50%{opacity:0.8} }
+    .fade-in { animation: fadeIn 0.25s ease-out forwards; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+    .skeleton { background: linear-gradient(90deg,#f0f0f0 25%,#e0e0e0 50%,#f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+  </style>
+</head>
+<body class="antialiased">
+
+  <!-- HEADER -->
+  <header class="bg-gradient-to-r from-emerald-600 to-green-700 text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-2.5 cursor-pointer" onclick="navigateTo('home')">
+        <div class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center text-xl shadow-inner border border-white/20">🏪</div>
+        <div>
+          <div class="flex items-center gap-1.5">
+            <h1 class="text-lg md:text-xl font-extrabold tracking-tight">Ganesh Store</h1>
+            <span class="bg-yellow-400 text-yellow-950 text-[10px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider">⚡ 15 Mins</span>
+          </div>
+          <button onclick="openLocationModal(event)" class="text-xs text-green-100 flex items-center gap-1 hover:text-white transition">
+            <i class="fas fa-map-marker-alt text-yellow-300 text-xs"></i>
+            <span id="current-location-label" class="font-medium truncate max-w-[140px] md:max-w-[220px]">Krishna Lanka, Vijayawada</span>
+            <i class="fas fa-chevron-down text-[10px] opacity-75"></i>
+          </button>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="navigateTo('search')" class="hidden md:flex items-center gap-2 bg-white/15 hover:bg-white/25 px-3.5 py-2 rounded-full text-xs font-medium backdrop-blur-sm transition border border-white/20">
+          <i class="fas fa-search text-green-100"></i><span>Search groceries...</span>
+        </button>
+        <a href="admin.html" title="Store Owner Admin Panel" class="bg-white/15 hover:bg-white/25 px-2.5 py-2 rounded-full text-xs font-semibold backdrop-blur-sm transition border border-white/20 flex items-center gap-1.5 text-white">
+          <i class="fas fa-user-shield text-xs"></i>
+          <span class="hidden sm:inline">Admin</span>
+        </a>
+        <button onclick="navigateTo('cart')" class="relative bg-white text-green-700 hover:bg-green-50 px-3.5 py-2 rounded-full font-bold text-xs flex items-center gap-2 shadow-sm transition card-press">
+          <i class="fas fa-shopping-cart text-sm"></i>
+          <span class="hidden sm:inline">Cart</span>
+          <span id="header-cart-count" class="bg-emerald-600 text-white text-[11px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center hide">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- LOADING SCREEN -->
+  <div id="loading-screen" class="fixed inset-0 bg-white flex flex-col items-center justify-center z-50">
+    <div class="text-5xl mb-4 animate-bounce">🏪</div>
+    <h2 class="text-lg font-bold text-gray-800 mb-1">Ganesh Store</h2>
+    <p class="text-xs text-gray-500 mb-4">Loading fresh products...</p>
+    <div class="w-40 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+      <div class="h-full bg-emerald-500 rounded-full animate-pulse" style="width:70%"></div>
+    </div>
+  </div>
+
+  <main class="max-w-5xl mx-auto px-4 py-4 md:py-6">
+
+    <!-- HOME PAGE -->
+    <section id="page-home" class="hide fade-in space-y-6">
+      <!-- Hero Banner -->
+      <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-green-600 to-teal-700 text-white p-5 md:p-8 shadow-xl">
+        <div class="relative z-10 max-w-md space-y-2 md:space-y-3">
+          <span class="inline-block bg-white/20 backdrop-blur-md text-emerald-100 text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider">🎉 Flat ₹50 OFF on first order</span>
+          <h2 class="text-2xl md:text-4xl font-extrabold leading-tight">Fresh Daily Groceries at Your Doorstep</h2>
+          <p class="text-xs md:text-sm text-green-100">Farm fresh vegetables, crisp fruits, cold drinks & snacks delivered right on time.</p>
+          <div class="pt-2 flex items-center gap-3">
+            <button onclick="navigateTo('categories')" class="bg-white text-green-800 font-bold px-5 py-2.5 rounded-xl text-xs md:text-sm shadow-md hover:bg-green-50 transition card-press">Explore All Categories</button>
+            <button onclick="applyOfferCode('FRESH50')" class="bg-emerald-900/40 hover:bg-emerald-900/60 border border-white/20 text-white font-medium px-4 py-2.5 rounded-xl text-xs backdrop-blur-sm transition">Use Code: <b>FRESH50</b></button>
+          </div>
+        </div>
+        <div class="absolute -right-4 -bottom-6 text-7xl md:text-9xl opacity-25 select-none pointer-events-none">🥦🍎🥤</div>
+      </div>
+
+      <!-- Search Bar -->
+      <div class="relative">
+        <input type="text" id="home-search-input" onfocus="navigateTo('search')" placeholder="Search 'tomato', 'milk', 'chips'..."
+          class="w-full bg-white border border-gray-200 rounded-2xl pl-11 pr-4 py-3.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 transition" />
+        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+      </div>
+
+      <!-- Categories -->
+      <div>
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-base md:text-lg font-bold text-gray-900">Explore Categories</h3>
+          <button onclick="navigateTo('categories')" class="text-xs font-semibold text-emerald-600">View All <i class="fas fa-arrow-right text-[10px]"></i></button>
+        </div>
+        <div class="grid grid-cols-3 sm:grid-cols-6 gap-3" id="home-categories-grid"></div>
+      </div>
+
+      <!-- Featured Products -->
+      <div>
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h3 class="text-base md:text-lg font-bold text-gray-900">Popular Essentials</h3>
+            <p class="text-xs text-gray-500">Most ordered daily grocery staples</p>
+          </div>
+          <span class="text-xs bg-green-100 text-green-800 font-semibold px-2.5 py-1 rounded-full">🔥 Hot Sellers</span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5" id="home-featured-grid"></div>
+      </div>
+
+      <!-- Features Strip -->
+      <div class="grid grid-cols-3 gap-2 md:gap-4">
+        <div class="bg-white rounded-2xl p-3 text-center border border-gray-100 shadow-sm"><div class="text-xl mb-1">⚡</div><h4 class="font-bold text-xs text-gray-800">Superfast</h4><p class="text-[10px] text-gray-500">15-20 Min Delivery</p></div>
+        <div class="bg-white rounded-2xl p-3 text-center border border-gray-100 shadow-sm"><div class="text-xl mb-1">💯</div><h4 class="font-bold text-xs text-gray-800">100% Fresh</h4><p class="text-[10px] text-gray-500">Handpicked Quality</p></div>
+        <div class="bg-white rounded-2xl p-3 text-center border border-gray-100 shadow-sm"><div class="text-xl mb-1">💰</div><h4 class="font-bold text-xs text-gray-800">Best Price</h4><p class="text-[10px] text-gray-500">Local Wholesale Rates</p></div>
+      </div>
+    </section>
+
+    <!-- CATEGORIES PAGE -->
+    <section id="page-categories" class="hide fade-in space-y-4">
+      <div><h2 class="text-xl font-bold text-gray-900">All Categories</h2><p class="text-xs text-gray-500">Choose a department to browse products</p></div>
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4" id="all-categories-grid"></div>
+    </section>
+
+    <!-- PRODUCTS PAGE -->
+    <section id="page-products" class="hide fade-in space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-gray-200">
+        <div class="flex items-center gap-3">
+          <button onclick="navigateTo('categories')" class="w-9 h-9 rounded-full bg-white border border-gray-200 hover:bg-gray-100 flex items-center justify-center text-gray-700 transition card-press shadow-sm"><i class="fas fa-arrow-left text-sm"></i></button>
+          <div>
+            <h2 id="category-page-title" class="text-lg md:text-xl font-bold text-gray-900">Category</h2>
+            <p id="category-page-subtitle" class="text-xs text-gray-500">0 Items</p>
+          </div>
+        </div>
+        <button onclick="navigateTo('cart')" class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full hover:bg-emerald-100 transition">Cart (<span id="category-cart-count">0</span>)</button>
+      </div>
+      <div id="products-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5"></div>
+    </section>
+
+    <!-- SEARCH PAGE -->
+    <section id="page-search" class="hide fade-in space-y-4">
+      <div class="relative">
+        <input type="text" id="search-query-input" oninput="handleSearchInput()" placeholder="Search any grocery item..."
+          class="w-full bg-white border border-gray-200 rounded-2xl pl-11 pr-10 py-3.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500" autofocus />
+        <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+        <button onclick="clearSearch()" id="clear-search-btn" class="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 hide"><i class="fas fa-times-circle"></i></button>
+      </div>
+      <div class="flex gap-2 overflow-x-auto pb-1" id="search-filter-pills"></div>
+      <div id="search-results-stats" class="text-xs font-medium text-gray-500 px-1">Showing all items</div>
+      <div id="search-results-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5"></div>
+      <div id="search-empty-state" class="text-center py-16 hide">
+        <div class="text-5xl mb-3">🔍</div>
+        <h4 class="text-base font-bold text-gray-700">No items found</h4>
+        <p class="text-xs text-gray-400 mt-1">Try a different search term</p>
+      </div>
+    </section>
+
+    <!-- CART PAGE -->
+    <section id="page-cart" class="hide fade-in space-y-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <button onclick="navigateBack()" class="w-9 h-9 rounded-full bg-white border border-gray-200 hover:bg-gray-100 flex items-center justify-center text-gray-700 transition card-press shadow-sm"><i class="fas fa-arrow-left text-sm"></i></button>
+          <div><h2 class="text-lg md:text-xl font-bold text-gray-900">Your Basket</h2><p class="text-xs text-gray-500" id="cart-item-count-text">0 items</p></div>
+        </div>
+        <button onclick="clearCartConfirm()" id="btn-clear-cart" class="text-xs text-red-500 hover:text-red-700 font-medium"><i class="fas fa-trash-alt mr-1"></i> Empty</button>
+      </div>
+
+      <div id="cart-empty" class="text-center py-16 bg-white rounded-3xl border border-gray-100 shadow-sm hide">
+        <div class="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center text-4xl mx-auto mb-4">🛒</div>
+        <h3 class="text-lg font-bold text-gray-800">Your basket is empty</h3>
+        <p class="text-xs text-gray-500 mt-1 max-w-xs mx-auto">Add some fresh groceries!</p>
+        <button onclick="navigateTo('home')" class="mt-5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-6 py-3 rounded-xl shadow-md transition card-press">Start Shopping</button>
+      </div>
+
+      <div id="cart-content-wrapper" class="grid grid-cols-1 md:grid-cols-3 gap-5 items-start">
+        <div class="md:col-span-2 space-y-3" id="cart-items"></div>
+        <div class="bg-white rounded-3xl p-5 border border-gray-100 shadow-md space-y-4">
+          <h3 class="text-sm font-bold text-gray-900 border-b pb-2">Bill Summary</h3>
+          <div class="space-y-1.5">
+            <label class="text-[11px] font-semibold text-gray-600">Promo Code</label>
+            <div class="flex gap-2">
+              <input type="text" id="cart-coupon-input" placeholder="FRESH50" class="flex-1 uppercase font-mono text-xs border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500" />
+              <button onclick="applyCoupon()" class="bg-gray-800 text-white text-xs font-semibold px-4 py-2 rounded-xl">Apply</button>
+            </div>
+            <div id="coupon-applied-msg" class="text-[11px] text-green-600 font-medium hide"></div>
+          </div>
+          <div class="space-y-2 text-xs text-gray-600 border-t pt-3">
+            <div class="flex justify-between"><span>Item Subtotal</span><span id="bill-subtotal" class="font-semibold text-gray-800">₹0</span></div>
+            <div class="flex justify-between"><span>Delivery Fee</span><span id="bill-delivery" class="font-semibold text-gray-800">₹25</span></div>
+            <div class="text-[10px] text-emerald-600" id="delivery-free-indicator">⚡ Add ₹199+ for FREE Delivery</div>
+            <div id="coupon-discount-row" class="flex justify-between text-emerald-600 font-semibold hide"><span>Discount</span><span id="bill-discount">-₹0</span></div>
+            <div class="flex justify-between text-sm font-extrabold text-gray-900 border-t pt-3"><span>To Pay</span><span id="bill-total" class="text-emerald-700 text-base">₹0</span></div>
+          </div>
+          <button onclick="navigateTo('checkout')" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-2xl font-bold text-sm shadow-md transition card-press flex items-center justify-center gap-2">Proceed to Checkout <i class="fas fa-arrow-right text-xs"></i></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- CHECKOUT PAGE -->
+    <section id="page-checkout" class="hide fade-in space-y-4">
+      <div class="flex items-center gap-3 pb-2 border-b">
+        <button onclick="navigateTo('cart')" class="w-9 h-9 rounded-full bg-white border border-gray-200 hover:bg-gray-100 flex items-center justify-center text-gray-700 transition card-press shadow-sm"><i class="fas fa-arrow-left text-sm"></i></button>
+        <div><h2 class="text-lg md:text-xl font-bold text-gray-900">Checkout</h2><p class="text-xs text-gray-500">Delivery details & payment</p></div>
+      </div>
+      <div class="max-w-xl mx-auto bg-white rounded-3xl p-5 md:p-7 border border-gray-100 shadow-md space-y-5">
+        <div>
+          <h3 class="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2"><i class="fas fa-map-marker-alt text-emerald-600"></i><span>Delivery Address</span></h3>
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 mb-1">Full Name <span class="text-red-500">*</span></label>
+              <input type="text" id="checkout-name" placeholder="e.g. Lohith Kumar" class="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 mb-1">Mobile Number <span class="text-red-500">*</span></label>
+              <div class="relative">
+                <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-500">+91</span>
+                <input type="tel" id="checkout-phone" maxlength="10" placeholder="9876543210" class="w-full border border-gray-300 rounded-xl pl-12 pr-3.5 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-green-500" />
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 mb-1">Complete Address <span class="text-red-500">*</span></label>
+              <textarea id="checkout-address" rows="2" placeholder="House No., Street, Area, Vijayawada" class="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"></textarea>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 mb-1">Delivery Note (Optional)</label>
+              <input type="text" id="checkout-note" placeholder="e.g. Ring bell, leave with security" class="w-full border border-gray-300 rounded-xl px-3.5 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-green-500" />
+            </div>
+          </div>
+        </div>
+        <div class="border-t pt-4">
+          <h3 class="text-sm font-bold text-gray-900 mb-3 flex items-center gap-2"><i class="fas fa-wallet text-emerald-600"></i><span>Payment Method</span></h3>
+          <div class="space-y-2">
+            <label class="flex items-center justify-between p-3 border border-green-500 bg-green-50/50 rounded-2xl cursor-pointer">
+              <div class="flex items-center gap-3"><input type="radio" name="payment_method" value="COD" checked class="accent-emerald-600 w-4 h-4" /><div><span class="text-xs font-bold text-gray-800 block">Cash on Delivery</span><span class="text-[10px] text-gray-500">Pay cash when delivered</span></div></div><span class="text-xl">💵</span>
+            </label>
+            <label class="flex items-center justify-between p-3 border border-gray-200 rounded-2xl cursor-pointer">
+              <div class="flex items-center gap-3"><input type="radio" name="payment_method" value="UPI" class="accent-emerald-600 w-4 h-4" /><div><span class="text-xs font-bold text-gray-800 block">UPI Payment</span><span class="text-[10px] text-gray-500">GPay, PhonePe, Paytm</span></div></div><span class="text-xl">📱</span>
+            </label>
+            <label class="flex items-center justify-between p-3 border border-gray-200 rounded-2xl cursor-pointer">
+              <div class="flex items-center gap-3"><input type="radio" name="payment_method" value="WHATSAPP" class="accent-emerald-600 w-4 h-4" /><div><span class="text-xs font-bold text-gray-800 block">Send via WhatsApp</span><span class="text-[10px] text-gray-500">Direct message to store</span></div></div><span class="text-xl text-green-500"><i class="fab fa-whatsapp"></i></span>
+            </label>
+          </div>
+        </div>
+        <div class="border-t pt-4">
+          <div class="flex justify-between items-center mb-4">
+            <div><span class="text-xs text-gray-500 block">Total Amount</span><span id="checkout-payable-total" class="text-2xl font-extrabold text-emerald-700">₹0</span></div>
+            <span class="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2.5 py-1 rounded-full">🔒 Secure</span>
+          </div>
+          <button onclick="processOrderPlacement()" id="btn-place-order" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3.5 rounded-2xl font-bold text-base shadow-lg transition flex items-center justify-center gap-2 card-press">
+            <i class="fas fa-check-circle"></i><span>Confirm & Place Order</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SUCCESS PAGE -->
+    <section id="page-success" class="hide fade-in text-center py-10 max-w-md mx-auto">
+      <div class="w-24 h-24 bg-green-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner text-5xl"><i class="fas fa-check"></i></div>
+      <h2 class="text-2xl font-extrabold text-gray-900">Order Placed! 🎉</h2>
+      <p class="text-xs text-gray-500 mt-1">Thank you for shopping at Ganesh Store.</p>
+      <div class="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm mt-5 text-left space-y-3">
+        <div class="flex justify-between items-center border-b pb-2">
+          <div><span class="text-[10px] text-gray-400 uppercase font-bold">Order ID</span><p id="success-order-id" class="font-mono font-bold text-sm text-emerald-700">ORD-000000</p></div>
+          <button onclick="copyOrderId()" class="text-xs text-gray-500 hover:text-gray-800 flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-md"><i class="fas fa-copy text-[10px]"></i> Copy</button>
+        </div>
+        <div class="text-xs text-gray-600 space-y-1">
+          <p><span class="text-gray-400">Name:</span> <b id="success-cust-name">-</b></p>
+          <p><span class="text-gray-400">Phone:</span> <span id="success-cust-phone">-</span></p>
+          <p><span class="text-gray-400">Address:</span> <span id="success-cust-address">-</span></p>
+          <p><span class="text-gray-400">Payment:</span> <span id="success-cust-payment" class="font-semibold">-</span></p>
+          <p><span class="text-gray-400">Total:</span> <b id="success-cust-total" class="text-emerald-700 font-extrabold">-</b></p>
+        </div>
+      </div>
+      <div class="mt-6 space-y-2.5">
+        <button onclick="openWhatsAppOrderShare()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-2xl text-xs flex items-center justify-center gap-2 shadow-md transition card-press"><i class="fab fa-whatsapp text-lg"></i><span>Share Order on WhatsApp</span></button>
+        <button onclick="navigateTo('my-orders')" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-3 rounded-2xl text-xs transition">View My Orders</button>
+        <button onclick="navigateTo('home')" class="w-full text-emerald-600 font-semibold py-2 text-xs hover:underline">← Return to Home</button>
+      </div>
+    </section>
+
+    <!-- MY ORDERS PAGE -->
+    <section id="page-my-orders" class="hide fade-in space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b">
+        <div class="flex items-center gap-3">
+          <button onclick="navigateTo('home')" class="w-9 h-9 rounded-full bg-white border border-gray-200 hover:bg-gray-100 flex items-center justify-center text-gray-700 transition card-press shadow-sm"><i class="fas fa-arrow-left text-sm"></i></button>
+          <div><h2 class="text-lg md:text-xl font-bold text-gray-900">My Orders</h2><p class="text-xs text-gray-500">Your order history & tracking</p></div>
+        </div>
+        <button onclick="navigateTo('home')" class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full">+ Shop</button>
+      </div>
+      <div id="my-orders-list" class="space-y-4"></div>
+      <div id="my-orders-empty" class="text-center py-16 bg-white rounded-3xl border border-gray-100 shadow-sm hide">
+        <div class="text-5xl mb-3">📦</div>
+        <h3 class="text-base font-bold text-gray-700">No orders yet</h3>
+        <button onclick="navigateTo('home')" class="mt-4 bg-emerald-600 text-white font-semibold text-xs px-5 py-2.5 rounded-xl shadow-sm">Browse Store</button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- BOTTOM NAVIGATION (Mobile) -->
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-200 z-50 px-2 py-1.5 flex items-center justify-around shadow-lg">
+    <button onclick="navigateTo('home')" id="nav-btn-home" class="flex flex-col items-center gap-0.5 text-emerald-600 py-1 px-3"><i class="fas fa-home text-lg"></i><span class="text-[10px] font-bold">Home</span></button>
+    <button onclick="navigateTo('categories')" id="nav-btn-categories" class="flex flex-col items-center gap-0.5 text-gray-500 py-1 px-3"><i class="fas fa-th-large text-lg"></i><span class="text-[10px] font-medium">Categories</span></button>
+    <button onclick="navigateTo('search')" id="nav-btn-search" class="flex flex-col items-center gap-0.5 text-gray-500 py-1 px-3"><i class="fas fa-search text-lg"></i><span class="text-[10px] font-medium">Search</span></button>
+    <button onclick="navigateTo('cart')" id="nav-btn-cart" class="relative flex flex-col items-center gap-0.5 text-gray-500 py-1 px-3">
+      <i class="fas fa-shopping-basket text-lg"></i>
+      <span id="nav-cart-badge" class="absolute top-0 right-2 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center hide">0</span>
+      <span class="text-[10px] font-medium">Basket</span>
+    </button>
+    <button onclick="navigateTo('my-orders')" id="nav-btn-my-orders" class="flex flex-col items-center gap-0.5 text-gray-500 py-1 px-3"><i class="fas fa-receipt text-lg"></i><span class="text-[10px] font-medium">Orders</span></button>
+  </nav>
+
+  <!-- LOCATION MODAL -->
+  <div id="location-modal" class="fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center p-4 z-50 hide">
+    <div class="bg-white rounded-3xl max-w-sm w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-sm text-gray-900"><i class="fas fa-map-marker-alt text-emerald-600 mr-1"></i> Change Location</h3>
+        <button onclick="closeLocationModal()" class="text-gray-400 hover:text-gray-600"><i class="fas fa-times"></i></button>
+      </div>
+      <input type="text" id="location-input-modal" value="Krishna Lanka, Vijayawada" class="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+      <div class="flex gap-2 flex-wrap">
+        <button onclick="saveLocationQuick('Krishna Lanka, Vijayawada')" class="text-[11px] bg-gray-100 hover:bg-gray-200 px-2.5 py-1 rounded-lg">Krishna Lanka</button>
+        <button onclick="saveLocationQuick('Benz Circle, Vijayawada')" class="text-[11px] bg-gray-100 hover:bg-gray-200 px-2.5 py-1 rounded-lg">Benz Circle</button>
+        <button onclick="saveLocationQuick('Governorpet, Vijayawada')" class="text-[11px] bg-gray-100 hover:bg-gray-200 px-2.5 py-1 rounded-lg">Governorpet</button>
+      </div>
+      <button onclick="confirmLocationModal()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs transition">Update Location</button>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast" class="fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 bg-gray-900/95 text-white px-5 py-2.5 rounded-full shadow-2xl text-xs font-medium opacity-0 transition-opacity duration-300 z-50 pointer-events-none flex items-center gap-2 border border-gray-700">
+    <span id="toast-icon">✓</span><span id="toast-msg">Done</span>
+  </div>
+
+  <script>
+    // ===================== FIREBASE INIT =====================
+    const firebaseConfig = {
+      apiKey: "AIzaSyCRFRMwglVm63ygFvzwBL819SLYR0K-Bvk",
+      authDomain: "ganesh-store-55fb9.firebaseapp.com",
+      databaseURL: "https://ganesh-store-55fb9-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "ganesh-store-55fb9",
+      storageBucket: "ganesh-store-55fb9.firebasestorage.app",
+      messagingSenderId: "954407790215",
+      appId: "1:954407790215:web:41fa6a39cd9e59e2fe7a22"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // ===================== CATEGORY META =====================
+    const categoryMeta = {
+      vegetables: { name: 'Vegetables',      icon: '🥬', color: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
+      fruits:     { name: 'Fruits',          icon: '🍎', color: 'bg-rose-50 text-rose-800 border-rose-200' },
+      dairy:      { name: 'Dairy & Eggs',    icon: '🥛', color: 'bg-amber-50 text-amber-800 border-amber-200' },
+      drinks:     { name: 'Cold Drinks',     icon: '🥤', color: 'bg-sky-50 text-sky-800 border-sky-200' },
+      snacks:     { name: 'Snacks',          icon: '🍿', color: 'bg-orange-50 text-orange-800 border-orange-200' },
+      staples:    { name: 'Atta, Rice & Dal',icon: '🌾', color: 'bg-yellow-50 text-yellow-800 border-yellow-200' }
+    };
+
+    // ===================== APP STATE =====================
+    let products = {};          // Loaded from Firebase
+    let cart = [];
+    let orders = [];
+    let appliedCoupon = null;
+    let activeCategory = 'vegetables';
+    let selectedSearchCategory = 'all';
+    let navigationHistory = ['home'];
+    let lastPlacedOrder = null;
+    let storeSettings = { whatsappNumber: '919391462015' };
+
+    // Default fallback catalog if database is fresh
+    const defaultCatalog = {
+      vegetables: {
+        v1: { name: 'Fresh Tomato', price: 40, originalPrice: 50, unit: '1 kg', emoji: '🍅', featured: true, active: true },
+        v2: { name: 'Farm Potato', price: 30, originalPrice: 38, unit: '1 kg', emoji: '🥔', featured: true, active: true },
+        v3: { name: 'Fresh Red Onion', price: 35, originalPrice: 45, unit: '1 kg', emoji: '🧅', featured: true, active: true },
+        v4: { name: 'Crunchy Carrot', price: 50, originalPrice: 60, unit: '500g', emoji: '🥕', active: true },
+        v5: { name: 'French Beans', price: 60, originalPrice: 70, unit: '500g', emoji: '🫘', active: true },
+        v6: { name: 'Green Cabbage', price: 25, originalPrice: 35, unit: '1 pc', emoji: '🥬', active: true },
+        v7: { name: 'Fresh Cauliflower', price: 40, originalPrice: 50, unit: '1 pc', emoji: '🥦', active: true },
+        v8: { name: 'Palak / Spinach', price: 20, originalPrice: 25, unit: '1 bunch', emoji: '🌿', active: true },
+        v9: { name: 'Purple Brinjal', price: 45, originalPrice: 55, unit: '500g', emoji: '🍆', active: true },
+        v10: { name: 'Green Capsicum', price: 70, originalPrice: 85, unit: '500g', emoji: '🫑', active: true },
+        v11: { name: 'Green Chilli & Ginger', price: 30, originalPrice: 35, unit: '200g combo', emoji: '🌶️', active: true },
+        v12: { name: 'Coriander & Mint', price: 15, originalPrice: 20, unit: '1 bunch combo', emoji: '🌱', active: true }
+      },
+      fruits: {
+        f1: { name: 'Shimla Royal Apple', price: 180, originalPrice: 210, unit: '1 kg (4-5 pcs)', emoji: '🍎', featured: true, active: true },
+        f2: { name: 'Robusta Banana', price: 40, originalPrice: 50, unit: '1 dozen', emoji: '🍌', featured: true, active: true },
+        f3: { name: 'Nagpur Orange', price: 80, originalPrice: 95, unit: '1 kg', emoji: '🍊', active: true },
+        f4: { name: 'Banganapalli Mango', price: 120, originalPrice: 150, unit: '1 kg', emoji: '🥭', active: true },
+        f5: { name: 'Seedless Green Grapes', price: 90, originalPrice: 110, unit: '500g', emoji: '🍇', active: true },
+        f6: { name: 'Kandhari Pomegranate', price: 150, originalPrice: 180, unit: '1 kg', emoji: '🍎', active: true },
+        f7: { name: 'Sweet Watermelon', price: 45, originalPrice: 60, unit: '1 pc (approx 2kg)', emoji: '🍉', active: true },
+        f8: { name: 'Ripe Papaya', price: 40, originalPrice: 50, unit: '1 pc', emoji: '🍈', active: true }
+      },
+      dairy: {
+        m1: { name: 'Heritage Cow Milk', price: 62, originalPrice: 65, unit: '1 Litre packet', emoji: '🥛', featured: true, active: true },
+        m2: { name: 'Fresh Malai Curd', price: 35, originalPrice: 40, unit: '500g cup', emoji: '🥣', active: true },
+        m3: { name: 'Fresh Paneer Block', price: 85, originalPrice: 95, unit: '200g pack', emoji: '🧀', featured: true, active: true },
+        m4: { name: 'Amul Butter Salted', price: 56, originalPrice: 60, unit: '100g pack', emoji: '🧈', active: true },
+        m5: { name: 'Amul Cheese Slices', price: 75, originalPrice: 85, unit: '5 slices pack', emoji: '🧀', active: true },
+        m6: { name: 'Pure Desi Cow Ghee', price: 135, originalPrice: 150, unit: '200ml jar', emoji: '🫙', active: true },
+        m7: { name: 'Farm Brown Eggs', price: 45, originalPrice: 50, unit: '6 eggs tray', emoji: '🥚', active: true }
+      },
+      drinks: {
+        d1: { name: 'Coca Cola Chilled', price: 40, originalPrice: 45, unit: '750ml bottle', emoji: '🥤', featured: true, active: true },
+        d2: { name: 'Sprite Lemon Drink', price: 40, originalPrice: 45, unit: '750ml bottle', emoji: '🧃', active: true },
+        d3: { name: 'Thums Up Charged', price: 40, originalPrice: 45, unit: '750ml bottle', emoji: '🥤', active: true },
+        d4: { name: 'Kinley Mineral Water', price: 20, originalPrice: 20, unit: '1 Litre bottle', emoji: '💧', active: true },
+        d5: { name: 'Real Alphonso Mango', price: 85, originalPrice: 95, unit: '1 Litre tetra', emoji: '🥭', active: true },
+        d6: { name: 'Tender Coconut Water', price: 50, originalPrice: 60, unit: '1 natural pc', emoji: '🥥', active: true },
+        d7: { name: 'Maaza Mango Drink', price: 55, originalPrice: 60, unit: '1.2 Litre bottle', emoji: '🧃', active: true }
+      },
+      snacks: {
+        s1: { name: 'Lays Classic Salted', price: 20, originalPrice: 20, unit: '50g pack', emoji: '🥔', active: true },
+        s2: { name: 'Kurkure Masala Munch', price: 20, originalPrice: 20, unit: '85g pack', emoji: '🌽', featured: true, active: true },
+        s3: { name: 'Britannia Good Day', price: 30, originalPrice: 35, unit: '120g pack', emoji: '🍪', active: true },
+        s4: { name: 'Haldiram Aloo Bhujia', price: 45, originalPrice: 50, unit: '150g pack', emoji: '🥨', active: true },
+        s5: { name: 'Parle-G Gold Biscuits', price: 15, originalPrice: 15, unit: '1 pack', emoji: '🍪', active: true },
+        s6: { name: 'Bingo Mad Angles', price: 20, originalPrice: 20, unit: '66g pack', emoji: '🔺', active: true },
+        s7: { name: 'Cadbury Dairy Milk', price: 80, originalPrice: 90, unit: '60g bar', emoji: '🍫', active: true }
+      },
+      staples: {
+        st1: { name: 'Chakki Fresh Atta', price: 240, originalPrice: 270, unit: '5 kg bag', emoji: '🌾', featured: true, active: true },
+        st2: { name: 'Sona Masoori Raw Rice', price: 320, originalPrice: 360, unit: '5 kg bag', emoji: '🍚', active: true },
+        st3: { name: 'Tata Sampann Toor Dal', price: 95, originalPrice: 110, unit: '500g pack', emoji: '🥣', active: true },
+        st4: { name: 'Fortune Refined Oil', price: 135, originalPrice: 150, unit: '1 Litre pouch', emoji: '🌻', active: true },
+        st5: { name: 'Tata Vacuum Iodized Salt', price: 28, originalPrice: 30, unit: '1 kg pack', emoji: '🧂', active: true }
+      }
+    };
+
+    function parseFirebaseProducts(raw) {
+      products = {};
+      Object.keys(raw).forEach(catId => {
+        if (raw[catId] && typeof raw[catId] === 'object') {
+          products[catId] = Object.entries(raw[catId])
+            .filter(([k, v]) => v && v.active !== false)
+            .map(([k, v]) => ({ id: k, ...v }));
+        }
+      });
+      renderCategories();
+      renderHomeFeatured();
+      updateCartCounters();
+      hideLoadingScreen();
+    }
+
+    // ===================== FIREBASE PRODUCT LOAD =====================
+    function loadProductsFromFirebase() {
+      db.ref('products').on('value', snap => {
+        if (snap.exists() && snap.val()) {
+          parseFirebaseProducts(snap.val());
+        } else {
+          // If database is empty, auto-seed default products to Firebase and display them!
+          db.ref('products').set(defaultCatalog);
+          parseFirebaseProducts(defaultCatalog);
+        }
+      });
+
+      // Load settings
+      db.ref('settings').once('value', snap => {
+        if (snap.exists()) {
+          storeSettings = { ...storeSettings, ...snap.val() };
+        }
+      });
+    }
+
+    function hideLoadingScreen() {
+      const ls = document.getElementById('loading-screen');
+      if (ls) { ls.style.opacity = '0'; setTimeout(() => ls.style.display = 'none', 400); }
+      if (document.getElementById('page-home').classList.contains('hide')) {
+        navigateTo('home', false);
+      }
+    }
+
+    // ===================== NAVIGATION =====================
+    function navigateTo(pageId, pushHistory = true) {
+      if (pushHistory) {
+        const cur = navigationHistory[navigationHistory.length - 1];
+        if (cur !== pageId) navigationHistory.push(pageId);
+      }
+      document.querySelectorAll('main > section').forEach(s => s.classList.add('hide'));
+      const tp = document.getElementById('page-' + pageId);
+      if (tp) { tp.classList.remove('hide'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+      updateBottomNavActive(pageId);
+      if (pageId === 'home') renderHomeFeatured();
+      else if (pageId === 'categories') renderCategoriesGrid();
+      else if (pageId === 'search') { renderSearchPills(); filterSearchResults(); }
+      else if (pageId === 'cart') renderCartView();
+      else if (pageId === 'checkout') renderCheckoutSummary();
+      else if (pageId === 'my-orders') renderMyOrders();
+    }
+
+    function navigateBack() {
+      if (navigationHistory.length > 1) {
+        navigationHistory.pop();
+        navigateTo(navigationHistory[navigationHistory.length - 1], false);
+      } else { navigateTo('home', false); }
+    }
+
+    function updateBottomNavActive(pageId) {
+      ['home','categories','search','cart','my-orders'].forEach(tab => {
+        const btn = document.getElementById('nav-btn-' + tab);
+        if (!btn) return;
+        const active = tab === pageId || (tab === 'categories' && pageId === 'products');
+        btn.classList.toggle('text-emerald-600', active);
+        btn.classList.toggle('font-bold', active);
+        btn.classList.toggle('text-gray-500', !active);
+      });
+    }
+
+    // ===================== CATEGORY RENDERING =====================
+    function renderCategories() {
+      const homeCatGrid = document.getElementById('home-categories-grid');
+      if (homeCatGrid) {
+        homeCatGrid.innerHTML = Object.entries(categoryMeta).map(([id, meta]) => `
+          <div onclick="openCategory('${id}')" class="${meta.color} rounded-2xl p-3 text-center cursor-pointer border shadow-sm hover:shadow-md transition card-press flex flex-col items-center justify-center">
+            <span class="text-3xl mb-1">${meta.icon}</span>
+            <span class="font-bold text-xs line-clamp-1">${meta.name.split(' ')[0]}</span>
+          </div>`).join('');
+      }
+      renderCategoriesGrid();
+    }
+
+    function renderCategoriesGrid() {
+      const grid = document.getElementById('all-categories-grid');
+      if (!grid) return;
+      grid.innerHTML = Object.entries(categoryMeta).map(([id, meta]) => {
+        const count = (products[id] || []).length;
+        return `<div onclick="openCategory('${id}')" class="${meta.color} rounded-3xl p-5 text-center cursor-pointer border shadow-sm hover:shadow-md transition card-press flex flex-col items-center justify-center space-y-2">
+          <div class="w-16 h-16 rounded-2xl bg-white/70 flex items-center justify-center text-4xl shadow-inner">${meta.icon}</div>
+          <div><h3 class="font-bold text-sm text-gray-900">${meta.name}</h3><p class="text-[11px] text-gray-500 font-medium">${count} items</p></div>
+        </div>`;
+      }).join('');
+    }
+
+    function openCategory(catId) {
+      activeCategory = catId;
+      const meta = categoryMeta[catId];
+      if (!meta) return;
+      document.getElementById('category-page-title').textContent = meta.name;
+      const list = products[catId] || [];
+      document.getElementById('category-page-subtitle').textContent = `${list.length} Items available`;
+      const grid = document.getElementById('products-grid');
+      grid.innerHTML = list.map(p => productCardHtml(p, catId)).join('');
+      navigateTo('products');
+    }
+
+    function renderHomeFeatured() {
+      const grid = document.getElementById('home-featured-grid');
+      if (!grid) return;
+      let featured = [];
+      Object.keys(products).forEach(catId => {
+        (products[catId] || []).filter(p => p.featured).forEach(p => featured.push({ ...p, catId }));
+      });
+      grid.innerHTML = featured.slice(0, 8).map(p => productCardHtml(p, p.catId)).join('');
+    }
+
+    // ===================== PRODUCT CARD =====================
+    function productCardHtml(product, catId) {
+      const cartItem = cart.find(i => i.id === product.id);
+      const qty = cartItem ? cartItem.qty : 0;
+      const hasDiscount = product.originalPrice && product.originalPrice > product.price;
+      return `<div class="bg-white rounded-2xl p-3 border border-gray-100 shadow-sm flex flex-col justify-between hover:border-gray-200 transition">
+        <div class="relative">
+          <div class="w-full h-24 sm:h-28 bg-gray-50 rounded-xl flex items-center justify-center text-5xl mb-2 select-none">${product.emoji || '📦'}</div>
+          ${hasDiscount ? `<span class="absolute top-1 left-1 bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-1.5 py-0.5 rounded-md">₹${product.originalPrice - product.price} OFF</span>` : ''}
+        </div>
+        <div>
+          <h4 class="font-bold text-xs sm:text-sm text-gray-800 leading-snug line-clamp-1">${escHtml(product.name)}</h4>
+          <p class="text-[11px] text-gray-400 font-medium mt-0.5">${escHtml(product.unit || '')}</p>
+        </div>
+        <div class="flex items-center justify-between mt-3 pt-2 border-t border-gray-50">
+          <div>
+            <span class="font-extrabold text-sm sm:text-base text-gray-900">₹${product.price}</span>
+            ${hasDiscount ? `<span class="text-[11px] text-gray-400 line-through ml-1">₹${product.originalPrice}</span>` : ''}
+          </div>
+          ${qty > 0 ? `
+            <div class="flex items-center bg-emerald-600 text-white rounded-xl overflow-hidden">
+              <button onclick="modifyQty('${product.id}','${catId}',-1)" class="w-7 h-7 flex items-center justify-center hover:bg-emerald-700 transition"><i class="fas fa-minus text-[10px]"></i></button>
+              <span class="font-bold text-xs px-2 min-w-[20px] text-center">${qty}</span>
+              <button onclick="modifyQty('${product.id}','${catId}',1)" class="w-7 h-7 flex items-center justify-center hover:bg-emerald-700 transition"><i class="fas fa-plus text-[10px]"></i></button>
+            </div>` : `
+            <button onclick="modifyQty('${product.id}','${catId}',1)" class="bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 border border-emerald-300 hover:border-emerald-600 text-xs font-bold px-3 py-1.5 rounded-xl transition card-press">+ ADD</button>`}
+        </div>
+      </div>`;
+    }
+
+    // ===================== CART LOGIC =====================
+    function modifyQty(productId, catId, delta) {
+      let product = null;
+      if (catId && products[catId]) product = products[catId].find(p => p.id === productId);
+      if (!product) {
+        for (const c in products) {
+          const f = products[c].find(p => p.id === productId);
+          if (f) { product = f; catId = c; break; }
+        }
+      }
+      if (!product) return;
+      const idx = cart.findIndex(i => i.id === productId);
+      if (idx > -1) {
+        cart[idx].qty += delta;
+        if (cart[idx].qty <= 0) { cart.splice(idx, 1); showToast('Removed from basket', 'info'); }
+        else if (delta > 0) showToast(`Added another ${product.name}`);
+      } else if (delta > 0) {
+        cart.push({ ...product, qty: 1, category: catId });
+        showToast(`Added ${product.name}`);
+      }
+      saveCartState();
+      refreshVisibleProductCards();
+      if (!document.getElementById('page-cart').classList.contains('hide')) renderCartView();
+    }
+
+    function refreshVisibleProductCards() {
+      if (!document.getElementById('page-products').classList.contains('hide')) {
+        const grid = document.getElementById('products-grid');
+        grid.innerHTML = (products[activeCategory] || []).map(p => productCardHtml(p, activeCategory)).join('');
+      }
+      if (!document.getElementById('page-home').classList.contains('hide')) renderHomeFeatured();
+      if (!document.getElementById('page-search').classList.contains('hide')) filterSearchResults();
+    }
+
+    function saveCartState() {
+      localStorage.setItem('ganesh_cart_v3', JSON.stringify(cart));
+      updateCartCounters();
+    }
+
+    function updateCartCounters() {
+      const total = cart.reduce((s, i) => s + i.qty, 0);
+      const hb = document.getElementById('header-cart-count');
+      if (hb) { hb.textContent = total; hb.classList.toggle('hide', total === 0); }
+      const nb = document.getElementById('nav-cart-badge');
+      if (nb) { nb.textContent = total; nb.classList.toggle('hide', total === 0); }
+      const cb = document.getElementById('category-cart-count');
+      if (cb) cb.textContent = total;
+    }
+
+    function getSubtotal() { return cart.reduce((s, i) => s + i.price * i.qty, 0); }
+    function getDeliveryFee(sub) { return sub === 0 ? 0 : sub >= 199 ? 0 : 25; }
+    function getGrandTotal() {
+      const sub = getSubtotal();
+      if (sub === 0) return 0;
+      const del = getDeliveryFee(sub);
+      let disc = 0;
+      if (appliedCoupon === 'FRESH50' && sub >= 300) disc = 50;
+      else if (appliedCoupon === 'SAVE20' && sub >= 150) disc = 20;
+      return Math.max(0, sub + del - disc);
+    }
+
+    function renderCartView() {
+      const totalItems = cart.reduce((s, i) => s + i.qty, 0);
+      document.getElementById('cart-item-count-text').textContent = `${totalItems} item${totalItems !== 1 ? 's' : ''}`;
+      const empty = cart.length === 0;
+      document.getElementById('cart-empty').classList.toggle('hide', !empty);
+      document.getElementById('cart-content-wrapper').classList.toggle('hide', empty);
+      document.getElementById('btn-clear-cart').classList.toggle('hide', empty);
+      if (empty) return;
+
+      document.getElementById('cart-items').innerHTML = cart.map(item => `
+        <div class="bg-white rounded-2xl p-3.5 border border-gray-100 shadow-sm flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3">
+            <div class="w-14 h-14 bg-gray-50 rounded-xl flex items-center justify-center text-3xl">${item.emoji || '📦'}</div>
+            <div>
+              <h4 class="font-bold text-xs sm:text-sm text-gray-900">${escHtml(item.name)}</h4>
+              <p class="text-[11px] text-gray-400">₹${item.price} / ${escHtml(item.unit || '')}</p>
+              <p class="text-xs font-extrabold text-emerald-700 mt-1">₹${item.price * item.qty}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="flex items-center bg-emerald-50 text-emerald-800 rounded-xl border border-emerald-200 overflow-hidden">
+              <button onclick="modifyQty('${item.id}','${item.category}',-1)" class="w-8 h-8 flex items-center justify-center hover:bg-emerald-100 transition"><i class="fas fa-minus text-[10px]"></i></button>
+              <span class="font-bold text-xs px-2 min-w-[24px] text-center">${item.qty}</span>
+              <button onclick="modifyQty('${item.id}','${item.category}',1)" class="w-8 h-8 flex items-center justify-center hover:bg-emerald-100 transition"><i class="fas fa-plus text-[10px]"></i></button>
+            </div>
+            <button onclick="removeItem('${item.id}')" class="text-gray-300 hover:text-red-500 transition p-1.5"><i class="fas fa-trash text-xs"></i></button>
+          </div>
+        </div>`).join('');
+
+      const sub = getSubtotal(), del = getDeliveryFee(sub), total = getGrandTotal();
+      document.getElementById('bill-subtotal').textContent = `₹${sub}`;
+      const delivElem = document.getElementById('bill-delivery');
+      const ind = document.getElementById('delivery-free-indicator');
+      if (del === 0) {
+        delivElem.innerHTML = '<span class="text-emerald-600 font-bold">FREE</span>';
+        ind.textContent = '🎉 You unlocked FREE Delivery!';
+        ind.className = 'text-[10px] text-emerald-600 font-bold';
+      } else {
+        delivElem.textContent = `₹${del}`;
+        ind.textContent = `⚡ Add ₹${199 - sub} more for FREE Delivery`;
+        ind.className = 'text-[10px] text-amber-600 font-medium';
+      }
+      const discRow = document.getElementById('coupon-discount-row');
+      if ((appliedCoupon === 'FRESH50' && sub >= 300) || (appliedCoupon === 'SAVE20' && sub >= 150)) {
+        discRow.classList.remove('hide');
+        document.getElementById('bill-discount').textContent = appliedCoupon === 'FRESH50' ? '-₹50' : '-₹20';
+      } else { discRow.classList.add('hide'); }
+      document.getElementById('bill-total').textContent = `₹${total}`;
+    }
+
+    function removeItem(id) {
+      cart = cart.filter(i => i.id !== id);
+      saveCartState(); renderCartView(); refreshVisibleProductCards();
+      showToast('Item removed', 'info');
+    }
+
+    function clearCartConfirm() {
+      if (!cart.length) return;
+      if (confirm('Clear your entire basket?')) {
+        cart = []; saveCartState(); renderCartView(); refreshVisibleProductCards();
+        showToast('Basket cleared', 'info');
+      }
+    }
+
+    function applyCoupon() {
+      const code = document.getElementById('cart-coupon-input').value.trim().toUpperCase();
+      const sub = getSubtotal();
+      const msg = document.getElementById('coupon-applied-msg');
+      if (code === 'FRESH50') {
+        if (sub < 300) { msg.textContent = 'FRESH50 requires min ₹300 cart'; msg.className = 'text-[11px] text-red-500 font-medium'; msg.classList.remove('hide'); return; }
+        appliedCoupon = 'FRESH50'; msg.textContent = '🎉 ₹50 off applied!'; msg.className = 'text-[11px] text-green-600 font-bold'; msg.classList.remove('hide');
+      } else if (code === 'SAVE20') {
+        if (sub < 150) { msg.textContent = 'SAVE20 requires min ₹150 cart'; msg.className = 'text-[11px] text-red-500 font-medium'; msg.classList.remove('hide'); return; }
+        appliedCoupon = 'SAVE20'; msg.textContent = '🎉 ₹20 off applied!'; msg.className = 'text-[11px] text-green-600 font-bold'; msg.classList.remove('hide');
+      } else { msg.textContent = 'Invalid code. Try FRESH50 or SAVE20'; msg.className = 'text-[11px] text-red-500 font-medium'; msg.classList.remove('hide'); return; }
+      showToast(`Coupon ${code} applied!`); renderCartView();
+    }
+
+    function applyOfferCode(code) { document.getElementById('cart-coupon-input').value = code; navigateTo('cart'); applyCoupon(); }
+
+    // ===================== SEARCH =====================
+    function renderSearchPills() {
+      const c = document.getElementById('search-filter-pills');
+      if (!c) return;
+      c.innerHTML = `<button onclick="filterSearchByCategory('all')" class="px-3.5 py-1.5 rounded-full text-xs whitespace-nowrap font-semibold transition ${selectedSearchCategory === 'all' ? 'bg-emerald-600 text-white' : 'bg-white text-gray-600 border border-gray-200'}">All</button>` +
+        Object.entries(categoryMeta).map(([id, m]) => `<button onclick="filterSearchByCategory('${id}')" class="px-3 py-1.5 rounded-full text-xs whitespace-nowrap font-semibold transition ${selectedSearchCategory === id ? 'bg-emerald-600 text-white' : 'bg-white text-gray-600 border border-gray-200'}">${m.icon} ${m.name}</button>`).join('');
+    }
+
+    function filterSearchByCategory(catId) { selectedSearchCategory = catId; renderSearchPills(); filterSearchResults(); }
+    function handleSearchInput() {
+      const val = document.getElementById('search-query-input').value;
+      document.getElementById('clear-search-btn').classList.toggle('hide', !val.trim());
+      filterSearchResults();
+    }
+    function clearSearch() { document.getElementById('search-query-input').value = ''; document.getElementById('clear-search-btn').classList.add('hide'); filterSearchResults(); }
+
+    function filterSearchResults() {
+      const query = (document.getElementById('search-query-input')?.value || '').trim().toLowerCase();
+      const grid = document.getElementById('search-results-grid');
+      const empty = document.getElementById('search-empty-state');
+      const stats = document.getElementById('search-results-stats');
+      let matches = [];
+      const cats = selectedSearchCategory === 'all' ? Object.keys(products) : [selectedSearchCategory];
+      cats.forEach(c => { (products[c] || []).forEach(p => { if (!query || p.name.toLowerCase().includes(query) || (p.unit || '').toLowerCase().includes(query)) matches.push({ ...p, catId: c }); }); });
+      stats.textContent = `Found ${matches.length} item${matches.length !== 1 ? 's' : ''}`;
+      if (matches.length === 0) { grid.innerHTML = ''; empty.classList.remove('hide'); }
+      else { empty.classList.add('hide'); grid.innerHTML = matches.map(p => productCardHtml(p, p.catId)).join(''); }
+    }
+
+    // ===================== CHECKOUT & ORDER =====================
+    function renderCheckoutSummary() {
+      if (cart.length === 0) { navigateTo('cart'); return; }
+      document.getElementById('checkout-payable-total').textContent = `₹${getGrandTotal()}`;
+    }
+
+    function processOrderPlacement() {
+      const name = document.getElementById('checkout-name').value.trim();
+      const phone = document.getElementById('checkout-phone').value.trim();
+      const address = document.getElementById('checkout-address').value.trim();
+      const note = document.getElementById('checkout-note').value.trim();
+      const payment = document.querySelector('input[name="payment_method"]:checked')?.value || 'COD';
+      if (!name) { showToast('Please enter your name', 'error'); return; }
+      if (!/^[6-9]\d{9}$/.test(phone)) { showToast('Enter valid 10-digit mobile number', 'error'); return; }
+      if (!address || address.length < 6) { showToast('Please enter complete address', 'error'); return; }
+      if (!cart.length) { showToast('Your basket is empty', 'error'); return; }
+
+      localStorage.setItem('ganesh_user_profile_v3', JSON.stringify({ name, phone, address }));
+
+      const sub = getSubtotal(), del = getDeliveryFee(sub), total = getGrandTotal();
+      const orderId = 'ORD-' + Math.floor(100000 + Math.random() * 900000);
+      const newOrder = {
+        id: orderId,
+        date: new Date().toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }),
+        timestamp: Date.now(),
+        customer: { name, phone, address, note },
+        items: JSON.parse(JSON.stringify(cart)),
+        subtotal: sub, deliveryFee: del,
+        discount: appliedCoupon ? (appliedCoupon === 'FRESH50' ? 50 : 20) : 0,
+        couponUsed: appliedCoupon, total, paymentMethod: payment, status: 'Pending'
+      };
+
+      // Save to Firebase
+      db.ref('orders/' + orderId).set(newOrder);
+
+      // Save to local orders
+      orders.unshift(newOrder);
+      localStorage.setItem('ganesh_orders_v3', JSON.stringify(orders));
+      lastPlacedOrder = newOrder;
+
+      // Reset
+      cart = []; appliedCoupon = null; saveCartState();
+
+      // Show success
+      document.getElementById('success-order-id').textContent = orderId;
+      document.getElementById('success-cust-name').textContent = name;
+      document.getElementById('success-cust-phone').textContent = phone;
+      document.getElementById('success-cust-address').textContent = address;
+      document.getElementById('success-cust-payment').textContent = payment === 'COD' ? 'Cash on Delivery' : payment === 'UPI' ? 'UPI Online' : 'WhatsApp Order';
+      document.getElementById('success-cust-total').textContent = `₹${total}`;
+      navigateTo('success');
+      showToast('Order placed successfully! 🎉');
+      if (payment === 'WHATSAPP') setTimeout(openWhatsAppOrderShare, 600);
+    }
+
+    function copyOrderId() {
+      const id = document.getElementById('success-order-id').textContent;
+      navigator.clipboard.writeText(id).then(() => showToast('Order ID copied!'));
+    }
+
+    function openWhatsAppOrderShare() {
+      if (!lastPlacedOrder) return;
+      const o = lastPlacedOrder;
+      let msg = `*🛍️ NEW ORDER: ${o.id}*\n*Customer:* ${o.customer.name} (${o.customer.phone})\n*Address:* ${o.customer.address}\n`;
+      if (o.customer.note) msg += `*Note:* ${o.customer.note}\n`;
+      msg += `───────────────\n*ITEMS:*\n`;
+      o.items.forEach(i => { msg += `• ${i.emoji} ${i.name} × ${i.qty} = ₹${i.price * i.qty}\n`; });
+      msg += `───────────────\n*Subtotal:* ₹${o.subtotal}\n*Delivery:* ₹${o.deliveryFee}\n`;
+      if (o.discount > 0) msg += `*Discount:* -₹${o.discount}\n`;
+      msg += `*TOTAL:* ₹${o.total}\n*Payment:* ${o.paymentMethod}\n\nPlease confirm and deliver soon!`;
+      const wa = storeSettings.whatsappNumber || '919391462015';
+      window.open(`https://wa.me/${wa}?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+
+    // ===================== MY ORDERS =====================
+    function renderMyOrders() {
+      const list = document.getElementById('my-orders-list');
+      const empty = document.getElementById('my-orders-empty');
+      if (!orders.length) { list.innerHTML = ''; empty.classList.remove('hide'); return; }
+      empty.classList.add('hide');
+      const statusBadge = { 'Delivered': 'bg-blue-100 text-blue-800', 'Preparing': 'bg-amber-100 text-amber-800', 'Out for Delivery': 'bg-purple-100 text-purple-800', 'Pending': 'bg-yellow-100 text-yellow-800' };
+      list.innerHTML = orders.map(o => `
+        <div class="bg-white rounded-3xl p-4 md:p-5 border border-gray-100 shadow-sm space-y-3">
+          <div class="flex items-center justify-between border-b pb-2.5">
+            <div><span class="font-mono font-bold text-xs text-emerald-700">${escHtml(o.id)}</span><p class="text-[11px] text-gray-400 mt-0.5">${escHtml(o.date)}</p></div>
+            <span class="${statusBadge[o.status] || 'bg-gray-100 text-gray-800'} text-[10px] font-extrabold px-2.5 py-1 rounded-full">${o.status || 'Pending'}</span>
+          </div>
+          <div class="space-y-1.5 text-xs text-gray-700">
+            ${(o.items || []).map(item => `<div class="flex justify-between"><span>${item.emoji} ${escHtml(item.name)} × ${item.qty}</span><span class="font-semibold">₹${item.price * item.qty}</span></div>`).join('')}
+          </div>
+          <div class="border-t pt-2.5 flex items-center justify-between">
+            <p class="font-extrabold text-sm text-gray-900">₹${o.total} <span class="text-[10px] text-gray-400 font-normal">(${o.paymentMethod})</span></p>
+            <button onclick="reorderItems('${o.id}')" class="text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold px-3 py-1.5 rounded-xl transition"><i class="fas fa-redo-alt text-[10px] mr-1"></i> Reorder</button>
+          </div>
+        </div>`).join('');
+    }
+
+    function reorderItems(orderId) {
+      const order = orders.find(o => o.id === orderId);
+      if (!order) return;
+      order.items.forEach(item => {
+        const idx = cart.findIndex(c => c.id === item.id);
+        if (idx > -1) cart[idx].qty += item.qty;
+        else cart.push({ ...item });
+      });
+      saveCartState(); navigateTo('cart'); showToast('Items added to basket!');
+    }
+
+    // ===================== LOCATION MODAL =====================
+    function openLocationModal(e) { if (e) e.stopPropagation(); document.getElementById('location-modal').classList.remove('hide'); }
+    function closeLocationModal() { document.getElementById('location-modal').classList.add('hide'); }
+    function saveLocationQuick(loc) { document.getElementById('location-input-modal').value = loc; }
+    function confirmLocationModal() {
+      const loc = document.getElementById('location-input-modal').value.trim() || 'Krishna Lanka, Vijayawada';
+      document.getElementById('current-location-label').textContent = loc;
+      localStorage.setItem('ganesh_location_v3', loc);
+      closeLocationModal();
+      showToast(`Location: ${loc}`);
+    }
+
+    // ===================== TOAST =====================
+    let _tt;
+    function showToast(msg, type = 'success') {
+      const t = document.getElementById('toast'), ti = document.getElementById('toast-icon'), tm = document.getElementById('toast-msg');
+      tm.textContent = msg;
+      ti.textContent = type === 'error' ? '⚠️' : type === 'info' ? 'ℹ️' : '✓';
+      const colors = { error: 'bg-red-900/95 border-red-700', info: 'bg-gray-900/95 border-gray-700', success: 'bg-emerald-900/95 border-emerald-700' };
+      t.className = `fixed bottom-20 md:bottom-6 left-1/2 -translate-x-1/2 ${colors[type] || colors.success} text-white px-5 py-2.5 rounded-full shadow-2xl text-xs font-medium opacity-100 transition-opacity duration-300 z-50 pointer-events-none flex items-center gap-2 border`;
+      clearTimeout(_tt); _tt = setTimeout(() => t.classList.add('opacity-0'), 2500);
+    }
+
+    function escHtml(s) {
+      if (!s) return '';
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    // ===================== INIT =====================
+    function initApp() {
+      // Load persisted state
+      try {
+        const sc = localStorage.getItem('ganesh_cart_v3'); if (sc) cart = JSON.parse(sc);
+        const so = localStorage.getItem('ganesh_orders_v3'); if (so) orders = JSON.parse(so);
+        const sl = localStorage.getItem('ganesh_location_v3');
+        if (sl) { document.getElementById('current-location-label').textContent = sl; document.getElementById('location-input-modal').value = sl; }
+        const su = JSON.parse(localStorage.getItem('ganesh_user_profile_v3') || '{}');
+        if (su.name) document.getElementById('checkout-name').value = su.name;
+        if (su.phone) document.getElementById('checkout-phone').value = su.phone;
+        if (su.address) document.getElementById('checkout-address').value = su.address;
+      } catch(e) {}
+
+      loadProductsFromFirebase();
+
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initApp);
+    } else { initApp(); }
+  </script>
+</body>
+</html>
