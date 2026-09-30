@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://mlohithchintu0-create.github.io/ganesh-store/sitemap.xml
